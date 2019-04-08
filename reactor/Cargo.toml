@@ -1,0 +1,7 @@
+[package]
+name = "reactor"
+version = "0.1.0"
+authors = ["Noah Huesser <nh@technokrat.ch>"]
+edition = "2018"
+
+[dependencies]

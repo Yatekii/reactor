@@ -1,0 +1,15 @@
+[package]
+name = "reactor-derive"
+version = "0.1.0"
+authors = ["Noah Hüsser <nh@technokrat.ch>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "*"
+syn = { version = "*", features = ["full", "derive", "extra-traits"] }
+proc-macro2 = "*"
+
+reactor = { path = "../reactor" }
