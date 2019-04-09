@@ -6,6 +6,8 @@ use reactor::base::State;
 use reactor::base::Actor;
 
 #[derive(StateMachine)]
+#[event(Event)]
+#[state(Outer)]
 enum Outer {
     A(Option<A>),
     B(Option<B>),
@@ -13,12 +15,16 @@ enum Outer {
 }
 
 #[derive(StateMachine)]
+#[event(Event)]
+#[state(Outer)]
 enum A {
     IAA,
     IAB,
 }
 
 #[derive(StateMachine)]
+#[event(Event)]
+#[state(Outer)]
 enum B {
     IBA,
     IBB,
@@ -45,18 +51,23 @@ impl Outer {
 }
 
 impl Actor<Event> for Outer {
+    type State = Outer;
+
     fn enter(&self) {
         println!("Enter Outer");
     }
     
-    fn handle<O>(&self, event: Event) -> EventResult<O> {
+    fn handle(&self, event: Event) -> EventResult<Self::State> {
         println!("Outer Event({})",
             match event {
                 Event::U => "U",
                 Event::V => "V",
             }
         );
-        EventResult::Handled
+        match event {
+            Event::U => EventResult::Handled,
+            Event::V => EventResult::Transition(Outer::A(Some(A::IAA))),
+        }
     }
 
     fn exit(&self) {
@@ -65,11 +76,13 @@ impl Actor<Event> for Outer {
 }
 
 impl Actor<Event> for A {
+    type State = Outer;
+
     fn enter(&self) {
         println!("Enter A");
     }
     
-    fn handle<O>(&self, event: Event) -> EventResult<O> {
+    fn handle(&self, event: Event) -> EventResult<Self::State> {
         println!("A Event({})",
             match event {
                 Event::U => "U",
@@ -85,11 +98,13 @@ impl Actor<Event> for A {
 }
 
 impl Actor<Event> for B {
+    type State = Outer;
+
     fn enter(&self) {
         println!("Enter B");
     }
     
-    fn handle<O>(&self, event: Event) -> EventResult<O> {
+    fn handle(&self, event: Event) -> EventResult<Self::State> {
         println!("B Event({})",
             match event {
                 Event::U => "U",
@@ -107,4 +122,5 @@ impl Actor<Event> for B {
 fn main() {
     let mut reactor: Reactor<Outer, Event> = Reactor::new();
     reactor.react(Event::U);
+    reactor.react(Event::V);
 }

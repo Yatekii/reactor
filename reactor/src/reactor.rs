@@ -22,7 +22,7 @@ impl<S: State<E>, E: Clone> Reactor<S, E> {
     /// instead of just exiting to the first common denominator state.
     /// TODO: Fix this behavior.
     pub fn react(&mut self, event: E) {
-        match self.state.super_handle::<S>(event) {
+        match self.state.super_handle(event) {
             EventResult::Transition(new_state) => {
                 self.state.super_exit();
                 new_state.super_enter();

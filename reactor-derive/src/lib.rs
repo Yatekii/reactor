@@ -6,7 +6,7 @@ extern crate proc_macro;
 extern crate proc_macro2;
 
 
-#[proc_macro_derive(StateMachine, attributes(state_transitions))]
+#[proc_macro_derive(StateMachine, attributes(event, state))]
 pub fn hsm(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Parse the string representation
     let ast = syn::parse_macro_input!(input as syn::DeriveInput);
@@ -19,15 +19,21 @@ pub fn hsm(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
 fn impl_hsm(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
     if let syn::Data::Enum(syn::DataEnum { ref variants,.. }) = ast.data {
-        return impl_reactor(&ast.ident, variants.iter().collect::<Vec<_>>().as_slice(), &ast.generics);
+        return impl_reactor(&ast.ident, &ast.attrs, variants.iter().collect::<Vec<_>>().as_slice(), &ast.generics);
     } else {
         panic!("State Machine must be derived on a enum.");
     }
 }
 
-fn impl_reactor(name: &syn::Ident, variants: &[&syn::Variant], _generics: &syn::Generics) -> proc_macro2::TokenStream {
+fn impl_reactor(name: &syn::Ident, attrs: &Vec<syn::Attribute>, variants: &[&syn::Variant], _generics: &syn::Generics) -> proc_macro2::TokenStream {
     
     // let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let event_attr = attrs.iter().filter(|attr| attr.path.segments.first().unwrap().value().ident.to_string() == "event").next().unwrap();
+    let event_enum_type: Box<syn::Type> = syn::parse2(event_attr.tts.clone()).expect("Expected an enum type.");
+
+    let state_attr = attrs.iter().filter(|attr| attr.path.segments.first().unwrap().value().ident.to_string() == "state").next().unwrap();
+    let state_enum_type: Box<syn::Type> = syn::parse2(state_attr.tts.clone()).expect("Expected an enum type.");
 
     let enter_match_branches = variants.iter().map(|v| {
         let variant_ident = v.ident.clone();
@@ -93,7 +99,8 @@ fn impl_reactor(name: &syn::Ident, variants: &[&syn::Variant], _generics: &syn::
     }).unwrap();
 
     let res = quote! {
-        impl<E: Clone> State<E> for #name where #name: reactor::base::Actor<E> {
+        impl State<#event_enum_type> for #name where #name: reactor::base::Actor<#event_enum_type> {
+            type State = #state_enum_type;
             #initial_state_definition
 
             fn super_enter(&self) {
@@ -105,7 +112,7 @@ fn impl_reactor(name: &syn::Ident, variants: &[&syn::Variant], _generics: &syn::
                 }
             }
 
-            fn super_handle<O>(&self, event: E) -> EventResult<O> {
+            fn super_handle(&self, event: #event_enum_type) -> EventResult<<Self as State<#event_enum_type>>::State> {
                 use #name::*;
                 match self {
                     #(#handle_match_branches,)*
@@ -124,7 +131,7 @@ fn impl_reactor(name: &syn::Ident, variants: &[&syn::Variant], _generics: &syn::
     };
 
     // Uncomment to debug
-    println!("{}", res.to_string());
+    // println!("{}", res.to_string());
     
     res
 }
