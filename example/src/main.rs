@@ -1,9 +1,41 @@
-use reactor_derive::StateMachine;
+use reactor_derive::{
+    StateMachine,
+    state_machine,
+};
 
 use reactor::Reactor;
 use reactor::base::EventResult;
 use reactor::base::State;
 use reactor::base::Actor;
+
+state_machine!{
+    enum Outer2 {
+        enum Bla {
+            A1, B1,
+        },
+        C1,
+    }
+}
+
+impl Actor<Event> for Outer2 {
+    type State = Outer2;
+}
+
+impl Actor<Event> for Bla {
+    type State = Outer2;
+}
+
+impl Actor<Event> for C1 {
+    type State = Outer2;
+}
+
+impl Actor<Event> for A1 {
+    type State = Outer2;
+}
+
+impl Actor<Event> for B1 {
+    type State = Outer2;
+}
 
 #[derive(StateMachine)]
 #[event(Event)]
