@@ -1,10 +1,10 @@
-pub enum EventResult<O> {
+pub enum EventResult<O: std::fmt::Debug> {
     Handled,
     Transition(O),
     NotHandled,
 }
 
-pub trait Actor<E: Clone> {
+pub trait Actor<E: Clone> where <Self as Actor<E>>::State: std::fmt::Debug {
     type State;
 
     fn enter(&self) {}
@@ -12,11 +12,17 @@ pub trait Actor<E: Clone> {
     fn exit(&self) {}
 }
 
-pub trait State<E: Clone>: Actor<E> {
-    type State: State<E>;
+pub trait State<E: Clone>: Actor<E> + std::fmt::Debug {
+    type State: State<E> + std::fmt::Debug;
     const INITIAL_STATE: Self;
 
-    fn super_enter(&self);
+    fn get_levels(&self, levels: &mut [core::any::TypeId], ptr: usize);
+
+    fn super_enter(&self, level: i32);
     fn super_handle(&self, event: E) -> EventResult<<Self as State<E>>::State>;
-    fn super_exit(&self);
+    fn super_exit(&self, level: i32);
+}
+
+pub trait Root<E: Clone>: State<E> {
+    const MAX_LEVELS: usize;
 }
