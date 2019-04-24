@@ -64,16 +64,16 @@ fn generate_enum_variants(state: &SubState) -> proc_macro2::TokenStream {
     }
 }
 
-fn assemble_from_sub_state(root: &SubState, sub_state: &SubState, level: i32) -> (proc_macro2::TokenStream, usize) {
+fn assemble_from_sub_state(root: &SubState, sub_state: &SubState) -> (proc_macro2::TokenStream, usize) {
     let sub_state_name = sub_state.ident.clone();
 
-    let t = sub_state.sub_states.iter().map(|sub_state| assemble_from_sub_state(root, sub_state, level + 1)).collect::<(Vec<_>)>();
+    let t = sub_state.sub_states.iter().map(|sub_state| assemble_from_sub_state(root, sub_state)).collect::<(Vec<_>)>();
     let num_levels = t.iter().map(|v| v.1).fold(0, usize::max) + 1;
     let sub_state_definitions = t.into_iter().map(|v| v.0).collect::<Vec<_>>();
 
     let sub_state_variants = generate_enum_variants(sub_state);
 
-    let super_trait_impl = impl_state(root, sub_state, level);
+    let super_trait_impl = impl_state(root, sub_state);
 
     (
         if sub_state_variants.is_empty() {
@@ -113,7 +113,7 @@ pub fn state_machine(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 
     println!("{:#?}", root);
 
-    let (enum_definitions, num_levels) = assemble_from_sub_state(&root, &root, 0);
+    let (enum_definitions, num_levels) = assemble_from_sub_state(&root, &root);
 
     let ident = root.ident;
 
@@ -121,36 +121,26 @@ pub fn state_machine(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
         #enum_definitions
 
         #[derive(Debug)]
-        pub struct Reactor { //, E: Clone
+        pub struct Reactor {
             state: #ident,
-            // _marker: core::marker::PhantomData<E>
         }
 
         const REACTOR_MAX_LEVELS: usize = #num_levels;
 
-        impl Reactor {
-            /// Creates a new Reactor with the initial state.
-            /// TDDO: Use attributes to determine the initial state!
-            pub fn new() -> Self {
+        impl React<Event> for Reactor {
+            fn new() -> Self {
                 let reactor = Self {
                     state: #ident::INITIAL_STATE,
-                    // _marker: core::marker::PhantomData
                 };
                 reactor.state.super_enter(0);
                 reactor
             }
-        }
 
-        impl React<Event> for Reactor {
-
-            /// Let the Reactor handle and event.
-            /// This logic is flawed atm, because it will always exit to the top of the state tree and enter down to the new state,
-            /// instead of just exiting to the first common denominator state.
-            /// TODO: Fix this behavior.
             fn react(&mut self, event: Event) {
                 match self.state.super_handle(event) {
                     EventResult::Transition(new_state) => {
-                        // TODO: Make this generic!
+                        // The initial value with the TypeId of the bool was chosen arbitrarily as there is no `::new()` or `::default()`.
+                        // bool is no valid type in the enum tree, so no issue there.
                         let levels_new = &mut [core::any::TypeId::of::<bool>(); REACTOR_MAX_LEVELS];
                         let levels_old = &mut [core::any::TypeId::of::<bool>(); REACTOR_MAX_LEVELS];
                         new_state.get_levels(levels_new, 0);
@@ -164,15 +154,7 @@ pub fn state_machine(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
                             i += 1;
                         }
 
-                        // let old_level = self.state.level();
-                        // let new_level = new_state.level();
-                        // let difference = old_level - new_level;
-
                         println!("Moving {:?} -> {:?}", self, new_state);
-
-                        // println!("Old path: {:#?}", levels_old);
-                        // println!("Old path: {:#?}", levels_new);
-                        // println!("{} - {} = {}", old_level, new_level, difference);
                         
                         self.state.super_exit(i as i32);
                         self.state = new_state;
@@ -189,7 +171,7 @@ pub fn state_machine(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     res.into()
 }
 
-fn impl_state(root: &SubState, sub_state: &SubState, level: i32) -> proc_macro2::TokenStream {
+fn impl_state(root: &SubState, sub_state: &SubState) -> proc_macro2::TokenStream {
     let enter_match_branches = &sub_state.sub_states.iter().map(|v| {
         let ident = sub_state.ident.clone();
         let variant_ident = v.ident.clone();
