@@ -86,23 +86,11 @@ fn assemble_from_sub_state(root: &SubState, sub_state: &SubState, level: i32) ->
                 #(#sub_state_definitions)*
             }
         } else {
-            let root_statement = if sub_state == root {
-                quote! {
-                    impl<E> Root<E> for #sub_state_name where #sub_state_name: reactor::base::State<E>, E: Copy {
-                        const MAX_LEVELS: usize = #num_levels;
-                    }
-                }
-            } else {
-                quote! {}
-            };
-
             quote! {
                 #[derive(Copy, Clone, Debug)]
                 enum #sub_state_name {
                     #(#sub_state_variants)*
                 }
-
-                #root_statement
 
                 #super_trait_impl
 
@@ -125,10 +113,75 @@ pub fn state_machine(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 
     println!("{:#?}", root);
 
-    let (enum_definitions, _) = assemble_from_sub_state(&root, &root, 0);
+    let (enum_definitions, num_levels) = assemble_from_sub_state(&root, &root, 0);
+
+    let ident = root.ident;
 
     let res = quote! {
         #enum_definitions
+
+        #[derive(Debug)]
+        pub struct Reactor { //, E: Clone
+            state: #ident,
+            // _marker: core::marker::PhantomData<E>
+        }
+
+        const REACTOR_MAX_LEVELS: usize = #num_levels;
+
+        impl Reactor {
+            /// Creates a new Reactor with the initial state.
+            /// TDDO: Use attributes to determine the initial state!
+            pub fn new() -> Self {
+                let reactor = Self {
+                    state: #ident::INITIAL_STATE,
+                    // _marker: core::marker::PhantomData
+                };
+                reactor.state.super_enter(0);
+                reactor
+            }
+        }
+
+        impl React<Event> for Reactor {
+
+            /// Let the Reactor handle and event.
+            /// This logic is flawed atm, because it will always exit to the top of the state tree and enter down to the new state,
+            /// instead of just exiting to the first common denominator state.
+            /// TODO: Fix this behavior.
+            fn react(&mut self, event: Event) {
+                match self.state.super_handle(event) {
+                    EventResult::Transition(new_state) => {
+                        // TODO: Make this generic!
+                        let levels_new = &mut [core::any::TypeId::of::<bool>(); REACTOR_MAX_LEVELS];
+                        let levels_old = &mut [core::any::TypeId::of::<bool>(); REACTOR_MAX_LEVELS];
+                        new_state.get_levels(levels_new, 0);
+                        self.state.get_levels(levels_old, 0);
+
+                        let mut i = 0;
+                        while i < REACTOR_MAX_LEVELS {
+                            if levels_new[i] != levels_old[i] {
+                                break;
+                            }
+                            i += 1;
+                        }
+
+                        // let old_level = self.state.level();
+                        // let new_level = new_state.level();
+                        // let difference = old_level - new_level;
+
+                        println!("Moving {:?} -> {:?}", self, new_state);
+
+                        // println!("Old path: {:#?}", levels_old);
+                        // println!("Old path: {:#?}", levels_new);
+                        // println!("{} - {} = {}", old_level, new_level, difference);
+                        
+                        self.state.super_exit(i as i32);
+                        self.state = new_state;
+                        self.state.super_enter(i as i32);
+                    }
+                    _ => {},
+                }
+            }
+        }
     };
 
     println!("{}", res.clone().to_string());

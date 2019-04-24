@@ -22,7 +22,3 @@ pub trait State<E: Clone>: Actor<E> + std::fmt::Debug {
     fn super_handle(&self, event: E) -> EventResult<<Self as State<E>>::State>;
     fn super_exit(&self, level: i32);
 }
-
-pub trait Root<E: Clone>: State<E> {
-    const MAX_LEVELS: usize;
-}

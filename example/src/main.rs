@@ -2,11 +2,10 @@ use reactor_derive::{
     state_machine,
 };
 
-use reactor::Reactor;
+use reactor::React;
 use reactor::base::EventResult;
 use reactor::base::State;
 use reactor::base::Actor;
-use reactor::base::Root;
 
 state_machine!{
     enum Outer2 {
@@ -257,7 +256,7 @@ enum Event {
 // }
 
 fn main() {
-    let mut reactor: Reactor<Outer2, Event> = Reactor::new();
+    let mut reactor: Reactor = Reactor::new();
     reactor.react(Event::U);
     reactor.react(Event::V);
 }

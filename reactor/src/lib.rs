@@ -3,4 +3,4 @@
 pub mod base;
 pub mod reactor;
 
-pub use reactor::Reactor;
+pub use reactor::React;
