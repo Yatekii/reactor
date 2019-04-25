@@ -1,10 +1,10 @@
-pub enum EventResult<O: std::fmt::Debug> {
+pub enum EventResult<O: core::fmt::Debug> {
     Handled,
     Transition(O),
     NotHandled,
 }
 
-pub trait Actor<E: Clone> where <Self as Actor<E>>::State: std::fmt::Debug {
+pub trait Actor<E: Clone> where <Self as Actor<E>>::State: core::fmt::Debug {
     type State;
 
     fn enter(&self) {}
@@ -12,8 +12,8 @@ pub trait Actor<E: Clone> where <Self as Actor<E>>::State: std::fmt::Debug {
     fn exit(&self) {}
 }
 
-pub trait State<E: Clone>: Actor<E> + std::fmt::Debug {
-    type State: State<E> + std::fmt::Debug;
+pub trait State<E: Clone>: Actor<E> + core::fmt::Debug {
+    type State: State<E> + core::fmt::Debug;
     const INITIAL_STATE: Self;
 
     fn get_levels(&self, levels: &mut [core::any::TypeId], ptr: usize);

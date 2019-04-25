@@ -1,5 +1,3 @@
-use crate::base::*;
-
 pub trait React<E> {
     /// Creates a new Reactor with the initial state.
     /// TDDO: Use attributes to determine the initial state!

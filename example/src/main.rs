@@ -59,7 +59,7 @@ impl Actor<Event> for C1 {
         );
         match event {
             Event::V => EventResult::Handled,
-            Event::U => EventResult::Transition(Outer2::Blo(Blo::E1(E1 {}))),
+            Event::U => EventResult::Transition(Outer2::Blo(Blo::E1(E1()))),
         }
     }
 
@@ -132,7 +132,7 @@ impl Actor<Event> for E1 {
         );
         match event {
             Event::U => EventResult::Handled,
-            Event::V => EventResult::Transition(Outer2::Bla(Bla::A1(A1 {}))),
+            Event::V => EventResult::Transition(Outer2::Bla(Bla::A1(A1()))),
         }
     }
 

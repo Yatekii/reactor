@@ -1,4 +1,4 @@
-#[no_std]
+#![no_std]
 
 pub mod base;
 pub mod reactor;

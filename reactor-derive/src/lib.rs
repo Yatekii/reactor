@@ -79,7 +79,14 @@ fn assemble_from_sub_state(root: &SubState, sub_state: &SubState) -> (proc_macro
         if sub_state_variants.is_empty() {
             quote! {
                 #[derive(Copy, Clone, Debug)]
-                struct #sub_state_name {}
+                struct #sub_state_name();
+
+                // TODO: Enable this once it's stable
+                // impl std::ops::Fn() -> Self for #sub_state_name {
+                //     extern "rust-call" fn call(&self) -> Self {
+                //         Self {}
+                //     }
+                // }
 
                 #super_trait_impl
 
